@@ -13,8 +13,9 @@ __pycache__/
 # Raw dataset (download instructions in README)
 data/
 
-# Generated outputs
-results/
+# Serialized models (metrics JSON in results/ is committed)
+*.pkl
+*.joblib
 
 # OS / editor
 .DS_Store
