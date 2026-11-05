@@ -52,13 +52,13 @@ def fit_pipeline(kind: str, train: pd.DataFrame, sensors: Sequence[str], window:
     return fitted
 
 
-def flag_summary(df: pd.DataFrame, drift: DriftResult) -> dict:
-    """How much of `df` the drift detector touched."""
-    per_engine = drift.flags.groupby(df["unit"]).any()
+def flag_summary(df: pd.DataFrame, flags: pd.DataFrame) -> dict:
+    """How much of `df` the drift detector touched (`flags` = DriftResult.flags rows for df)."""
+    per_engine = flags.groupby(df["unit"]).any()
     return {
         "engines_with_any_flag": int(per_engine.any(axis=1).sum()),
         "engines": int(df["unit"].nunique()),
-        "rows_with_any_flag": int(drift.flags.any(axis=1).sum()),
+        "rows_with_any_flag": int(flags.any(axis=1).sum()),
         "rows": len(df),
         "flagged_engines_by_sensor": {k: int(v) for k, v in per_engine.sum().items() if v > 0},
     }
