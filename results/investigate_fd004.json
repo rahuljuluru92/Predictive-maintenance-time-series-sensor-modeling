@@ -1,0 +1,90 @@
+{
+  "hypothesis": "leave-FD004-out loss concentrated in non-sea-level cycles (fan fault never seen there in training)",
+  "share_of_fd004_test_cycles_at_sea_level": 0.14689183287232493,
+  "pooled_model": {
+    "all": {
+      "threshold": 0.5,
+      "n": 41214,
+      "n_pos": 864,
+      "tp": 509,
+      "fp": 183,
+      "tn": 40167,
+      "fn": 355,
+      "recall": 0.5891203703703703,
+      "false_alert_rate": 0.004535315985130112,
+      "precision": 0.7355491329479769,
+      "roc_auc": 0.991180713318647
+    },
+    "sea_level": {
+      "threshold": 0.5,
+      "n": 6054,
+      "n_pos": 136,
+      "tp": 83,
+      "fp": 35,
+      "tn": 5883,
+      "fn": 53,
+      "recall": 0.6102941176470589,
+      "false_alert_rate": 0.005914160189253126,
+      "precision": 0.7033898305084746,
+      "roc_auc": 0.9901695723913086
+    },
+    "other_conditions": {
+      "threshold": 0.5,
+      "n": 35160,
+      "n_pos": 728,
+      "tp": 426,
+      "fp": 148,
+      "tn": 34284,
+      "fn": 302,
+      "recall": 0.5851648351648352,
+      "false_alert_rate": 0.004298327137546468,
+      "precision": 0.7421602787456446,
+      "roc_auc": 0.9913480926891417
+    },
+    "engines_with_a_false_alert": 21,
+    "engines": 248
+  },
+  "leave_fd004_out_model": {
+    "all": {
+      "threshold": 0.5,
+      "n": 41214,
+      "n_pos": 864,
+      "tp": 563,
+      "fp": 495,
+      "tn": 39855,
+      "fn": 301,
+      "recall": 0.6516203703703703,
+      "false_alert_rate": 0.012267657992565056,
+      "precision": 0.5321361058601134,
+      "roc_auc": 0.9632816157235302
+    },
+    "sea_level": {
+      "threshold": 0.5,
+      "n": 6054,
+      "n_pos": 136,
+      "tp": 83,
+      "fp": 51,
+      "tn": 5867,
+      "fn": 53,
+      "recall": 0.6102941176470589,
+      "false_alert_rate": 0.00861777627576884,
+      "precision": 0.6194029850746269,
+      "roc_auc": 0.9689531439476771
+    },
+    "other_conditions": {
+      "threshold": 0.5,
+      "n": 35160,
+      "n_pos": 728,
+      "tp": 480,
+      "fp": 444,
+      "tn": 33988,
+      "fn": 248,
+      "recall": 0.6593406593406593,
+      "false_alert_rate": 0.012894981412639405,
+      "precision": 0.5194805194805194,
+      "roc_auc": 0.9623664392502247
+    },
+    "engines_with_a_false_alert": 44,
+    "engines": 248
+  }
+}
