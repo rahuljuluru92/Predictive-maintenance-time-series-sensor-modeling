@@ -79,6 +79,66 @@ def roc_auc(y_true, scores) -> float:
     return float(u / (n_pos * n_neg))
 
 
+def relative_change(new: float, old: float) -> float:
+    """(new - old) / old; NaN when old is 0."""
+    return (new - old) / old if old else float("nan")
+
+
+def engine_counts(units, y_true, y_pred) -> tuple[np.ndarray, np.ndarray]:
+    """Confusion counts per engine: returns (engine ids, array n_engines x 4 of tp, fp, tn, fn)."""
+    u = np.asarray(units)
+    t, p = _as_binary(y_true), _as_binary(y_pred)
+    ids, inv = np.unique(u, return_inverse=True)
+    cells = np.column_stack([(t == 1) & (p == 1), (t == 0) & (p == 1), (t == 0) & (p == 0), (t == 1) & (p == 0)])
+    counts = np.zeros((len(ids), 4), dtype=np.int64)
+    np.add.at(counts, inv.ravel(), cells.astype(np.int64))
+    return ids, counts
+
+
+def _rates(counts: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    tp, fp, tn, fn = (counts[..., i].astype(np.float64) for i in range(4))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return tp / (tp + fn), fp / (fp + tn)
+
+
+def paired_bootstrap(units, y_true, pred_a, pred_b, n_boot: int = 2000, seed: int = 0, level: float = 0.95) -> dict:
+    """Engine-level paired bootstrap of (b - a) for recall and false-alert rate.
+
+    Engines are resampled with replacement; both models are always evaluated
+    on the same resampled engines. Returns point estimates and percentile
+    intervals for the absolute differences and the relative changes (b - a) / a.
+    """
+    _, ca = engine_counts(units, y_true, pred_a)
+    _, cb = engine_counts(units, y_true, pred_b)
+    n = len(ca)
+    rng = np.random.default_rng(seed)
+    w = rng.multinomial(n, np.full(n, 1.0 / n), size=n_boot)  # (n_boot, n_engines)
+    ra, fa = _rates(w @ ca)
+    rb, fb = _rates(w @ cb)
+    lo, hi = (1 - level) / 2 * 100, (1 + level) / 2 * 100
+    pa, pfa = _rates(ca.sum(axis=0))
+    pb, pfb = _rates(cb.sum(axis=0))
+
+    def interval(x):
+        x = x[np.isfinite(x)]
+        return [float(np.percentile(x, lo)), float(np.percentile(x, hi))]
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        rel_r, rel_f = (rb - ra) / ra, (fb - fa) / fa
+    return {
+        "n_boot": n_boot,
+        "level": level,
+        "recall_diff": float(pb - pa),
+        "recall_diff_ci": interval(rb - ra),
+        "recall_rel_change": float(relative_change(pb, pa)),
+        "recall_rel_change_ci": interval(rel_r),
+        "false_alert_rate_diff": float(pfb - pfa),
+        "false_alert_rate_diff_ci": interval(fb - fa),
+        "false_alert_rate_rel_change": float(relative_change(pfb, pfa)),
+        "false_alert_rate_rel_change_ci": interval(rel_f),
+    }
+
+
 def evaluate(y_true, scores, threshold: float = 0.5) -> dict:
     """All metrics at a fixed decision threshold (alert when score >= threshold) plus ROC-AUC."""
     s = np.asarray(scores, dtype=np.float64)

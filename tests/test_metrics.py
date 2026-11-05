@@ -78,3 +78,61 @@ def test_evaluation_report_last_cycle_per_engine():
     # Last cycles: unit 1 cycle 3 (label 1, p 0.9 -> TP); unit 2 cycle 2 (label 1, p 0.4 -> FN)
     last = r["last_cycle_per_engine"]
     assert (last["n"], last["tp"], last["fn"], last["fp"], last["tn"]) == (2, 1, 1, 0, 0)
+
+
+# ------------------------------------------------ Stage 5: comparison helpers
+
+
+def test_relative_change():
+    assert metrics.relative_change(0.5, 0.4) == pytest.approx(0.25)
+    assert metrics.relative_change(0.3, 0.4) == pytest.approx(-0.25)
+    assert np.isnan(metrics.relative_change(0.3, 0.0))
+
+
+def test_engine_counts_hand_computed():
+    # engine 7: (t,p) = (1,1) (0,1) (0,0)  -> tp 1, fp 1, tn 1, fn 0
+    # engine 3: (t,p) = (1,0) (1,1)        -> tp 1, fp 0, tn 0, fn 1
+    units = [7, 3, 7, 3, 7]
+    y = [1, 1, 0, 1, 0]
+    p = [1, 0, 1, 1, 0]
+    ids, counts = metrics.engine_counts(units, y, p)
+    assert ids.tolist() == [3, 7]
+    assert counts.tolist() == [[1, 0, 0, 1], [1, 1, 1, 0]]
+    assert counts.sum(axis=0).tolist() == list(metrics.confusion_counts(y, p).values())
+
+
+def test_paired_bootstrap_identical_models_have_zero_difference():
+    rng = np.random.default_rng(1)
+    units = np.repeat(np.arange(20), 10)
+    y = rng.integers(0, 2, 200)
+    p = rng.integers(0, 2, 200)
+    r = metrics.paired_bootstrap(units, y, p, p, n_boot=200, seed=0)
+    assert r["recall_diff"] == 0 and r["recall_diff_ci"] == [0.0, 0.0]
+    assert r["false_alert_rate_diff"] == 0 and r["false_alert_rate_diff_ci"] == [0.0, 0.0]
+
+
+def test_paired_bootstrap_point_estimates_and_interval():
+    # Model b catches every positive that a misses and adds no false alerts.
+    units = np.repeat(np.arange(10), 4)
+    y = np.tile([1, 1, 0, 0], 10)
+    a = np.tile([1, 0, 1, 0], 10)  # recall 0.5, false-alert rate 0.5
+    b = np.tile([1, 1, 1, 0], 10)  # recall 1.0, false-alert rate 0.5
+    r = metrics.paired_bootstrap(units, y, a, b, n_boot=500, seed=3)
+    assert r["recall_diff"] == pytest.approx(0.5)
+    assert r["recall_rel_change"] == pytest.approx(1.0)
+    assert r["false_alert_rate_diff"] == 0.0
+    # every engine is identical, so every resample gives the same answer
+    assert r["recall_diff_ci"] == pytest.approx([0.5, 0.5])
+    assert r["recall_rel_change_ci"] == pytest.approx([1.0, 1.0])
+
+
+def test_paired_bootstrap_is_seeded():
+    rng = np.random.default_rng(2)
+    units = np.repeat(np.arange(30), 5)
+    y = rng.integers(0, 2, 150)
+    a, b = rng.integers(0, 2, 150), rng.integers(0, 2, 150)
+    r1 = metrics.paired_bootstrap(units, y, a, b, n_boot=300, seed=5)
+    r2 = metrics.paired_bootstrap(units, y, a, b, n_boot=300, seed=5)
+    assert r1 == r2
+    lo, hi = r1["recall_diff_ci"]
+    assert lo <= r1["recall_diff"] <= hi
