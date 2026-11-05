@@ -1,0 +1,25 @@
+# Local-only working notes (never tracked)
+ASSUMPTIONS.md
+DECISIONS.md
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# Raw dataset (download instructions in README)
+data/
+
+# Generated outputs
+results/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
