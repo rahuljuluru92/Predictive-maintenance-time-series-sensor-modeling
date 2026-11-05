@@ -1,0 +1,143 @@
+{
+  "subset": "FD001",
+  "protocol": "5-fold split over training engines; detector fitted on the other folds",
+  "detector": {
+    "window": 10,
+    "baseline": 10,
+    "eig_ratio": 5.0,
+    "alpha": 0.01,
+    "z_thresh": 4.0,
+    "persistence": 10
+  },
+  "fold0_model": {
+    "k": 2,
+    "eigenvalue_ratio_to_median": [
+      319.01,
+      133.72,
+      1.57,
+      1.32,
+      1.28,
+      1.17,
+      1.03,
+      1.0,
+      0.9,
+      0.86,
+      0.83,
+      0.78,
+      0.73,
+      0.69,
+      0.65
+    ],
+    "detectable_share_1_minus_Pjj": {
+      "s2": 0.957,
+      "s3": 0.97,
+      "s4": 0.898,
+      "s6": 0.999,
+      "s7": 0.905,
+      "s8": 0.883,
+      "s9": 0.588,
+      "s11": 0.848,
+      "s12": 0.862,
+      "s13": 0.88,
+      "s14": 0.423,
+      "s15": 0.943,
+      "s17": 0.959,
+      "s20": 0.943,
+      "s21": 0.942
+    },
+    "injection_rates_raw_per_cycle": {
+      "s2": 0.02388,
+      "s3": 0.28137,
+      "s4": 0.48512,
+      "s7": 0.04567,
+      "s8": 0.00327,
+      "s9": 0.8218,
+      "s11": 0.01466,
+      "s12": 0.03951,
+      "s13": 0.00333,
+      "s14": 0.7058,
+      "s15": 0.00189,
+      "s17": 0.0731,
+      "s20": 0.00914,
+      "s21": 0.00547
+    },
+    "injection_rates_noise_units_per_cycle": {
+      "s2": 0.0791,
+      "s3": 0.0701,
+      "s4": 0.1211,
+      "s7": 0.1123,
+      "s8": 0.1083,
+      "s9": 0.1961,
+      "s11": 0.1443,
+      "s12": 0.1319,
+      "s13": 0.1098,
+      "s14": 0.2249,
+      "s15": 0.0932,
+      "s17": 0.0774,
+      "s20": 0.0904,
+      "s21": 0.091
+    }
+  },
+  "clean_engines_with_any_flag": [
+    4,
+    100
+  ],
+  "injected": {
+    "mimic": {
+      "engines": 100,
+      "detected_on_injected_sensor": 0.74,
+      "first_flag_is_injected_sensor": 0.72,
+      "any_other_sensor_flagged": 0.05,
+      "detection_rate_by_final_drift_noise_units": {
+        "[0.0, 2.0)": [
+          0.0,
+          13
+        ],
+        "[2.0, 4.0)": [
+          0.15384615384615385,
+          13
+        ],
+        "[4.0, 8.0)": [
+          0.8571428571428571,
+          14
+        ],
+        "[8.0, inf)": [
+          1.0,
+          60
+        ]
+      },
+      "median_drift_at_detection_noise_units": 3.7890501595926542,
+      "median_detection_delay_cycles": 35.0,
+      "median_correction_mae_noise_units": 0.5461096472688445,
+      "median_share_of_final_drift_removed": 0.9641634554548608
+    },
+    "mask": {
+      "engines": 100,
+      "detected_on_injected_sensor": 0.79,
+      "first_flag_is_injected_sensor": 0.76,
+      "any_other_sensor_flagged": 0.04,
+      "detection_rate_by_final_drift_noise_units": {
+        "[0.0, 2.0)": [
+          0.0,
+          13
+        ],
+        "[2.0, 4.0)": [
+          0.36363636363636365,
+          11
+        ],
+        "[4.0, 8.0)": [
+          0.9565217391304348,
+          23
+        ],
+        "[8.0, inf)": [
+          1.0,
+          53
+        ]
+      },
+      "median_drift_at_detection_noise_units": 3.8706902655917017,
+      "median_detection_delay_cycles": 36.0,
+      "median_correction_mae_noise_units": 0.5363363936695014,
+      "median_share_of_final_drift_removed": 0.9512623197288022
+    }
+  }
+}
