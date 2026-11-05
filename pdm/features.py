@@ -65,6 +65,56 @@ def _window_stats(values: np.ndarray, window: int) -> tuple[np.ndarray, np.ndarr
     return mean, std, slope
 
 
+def corrected_rolling_features(df: pd.DataFrame, sensors: Sequence[str], window: int, drift) -> pd.DataFrame:
+    """Stage 4: rolling mean/std/slope recomputed from drift-corrected streams.
+
+    `drift` is the pdm.drift.DriftResult for `df` (same index; `df` sorted by
+    unit and cycle). At cycle t, let F(t) be the set of sensors flagged as
+    drifting. For a sensor in F(t), its features at t are computed over the
+    window of corrected values x_j(s) - d_j(s), s = t-w+1..t, where d(s) is
+    the drift estimate for the set F(t) from the residual at cycle s (so the
+    whole window is corrected consistently and the flag onset does not create
+    an artificial step). Sensors not flagged at t keep their raw features.
+    Uses only cycles <= t.
+    """
+    from pdm.drift import _check_sorted, _unit_blocks  # local import: drift is optional for baseline use
+
+    sensors = list(sensors)
+    dcols = list(drift.flags.columns)
+    if missing := set(sensors) - set(dcols):
+        raise ValueError(f"no drift output for sensors {sorted(missing)}")
+    if not drift.flags.index.equals(df.index):
+        raise ValueError("drift result is not aligned with df")
+    _check_sorted(df)
+
+    raw = rolling_features(df, sensors, window)
+    out = raw.to_numpy().copy()
+    col_of = {s: 3 * i for i, s in enumerate(sensors)}
+    flags = drift.flags.to_numpy()
+    values = df[dcols].to_numpy(dtype=np.float64)
+    for start, stop in _unit_blocks(df["unit"].to_numpy()):
+        fl = flags[start:stop]
+        if not fl.any():
+            continue
+        patterns, inverse = np.unique(fl, axis=0, return_inverse=True)
+        engine_rows = np.arange(start, stop)
+        for p_idx, pattern in enumerate(patterns):
+            F = np.flatnonzero(pattern)
+            if F.size == 0:
+                continue
+            at = np.flatnonzero(inverse.ravel() == p_idx)  # cycles of this engine whose flag set is F
+            corrected = values[start:stop][:, F] - drift.estimate_with(F, engine_rows)
+            mean, std, slope = _window_stats(corrected, window)
+            for k, j in enumerate(F):
+                c = col_of.get(dcols[j])
+                if c is None:
+                    continue
+                out[start + at, c] = mean[at, k]
+                out[start + at, c + 1] = std[at, k]
+                out[start + at, c + 2] = slope[at, k]
+    return pd.DataFrame(out, index=df.index, columns=raw.columns)
+
+
 def rolling_features(df: pd.DataFrame, sensors: Sequence[str], window: int) -> pd.DataFrame:
     """Trailing rolling mean/std/slope per engine for each sensor.
 

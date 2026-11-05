@@ -73,6 +73,14 @@ def _check_sorted(df: pd.DataFrame) -> None:
         raise ValueError("rows must be sorted by unit then cycle, with contiguous cycles")
 
 
+def solve_drift(resid_F: np.ndarray, Q_FF: np.ndarray) -> np.ndarray:
+    """Least-squares single-sensor drift sizes for sensor set F: rows of Q_FF^-1 r_F.
+
+    pinv guards against nearly collinear sensors (poorly isolable pairs).
+    """
+    return resid_F @ np.linalg.pinv(Q_FF).T
+
+
 @dataclass
 class DriftResult:
     """Per-row outputs of DriftDetector.transform (rows aligned with the input frame)."""
@@ -82,7 +90,21 @@ class DriftResult:
     score: pd.Series  # Isolation Forest anomaly score (higher = more anomalous)
     anomalous: pd.Series  # score above the training threshold
     flags: pd.DataFrame  # bool per sensor: drifting at this cycle (persistent + attributed)
-    estimate: pd.DataFrame  # causal drift estimate per sensor, raw sensor units
+    estimate: pd.DataFrame  # causal drift estimate per sensor at this cycle, raw sensor units
+    complement: np.ndarray  # Q = I - P, projector onto the residual space (m x m)
+    noise_sigma: np.ndarray  # per-sensor noise scale (raw units per noise unit)
+
+    def estimate_with(self, sensor_idx: np.ndarray, rows: np.ndarray) -> np.ndarray:
+        """Drift estimate (raw units) for rows `rows` (positions) assuming the
+        flagged set is `sensor_idx` (positions in self.flags.columns).
+
+        Used to correct a whole feature window with the flag set known at its
+        last cycle: each earlier cycle s in the window gets the estimate from
+        its own residual r(s), which depends only on cycles <= s.
+        """
+        F = np.asarray(sensor_idx)
+        r = self.residual.to_numpy()[np.ix_(rows, F)]
+        return solve_drift(r, self.complement[np.ix_(F, F)]) * self.noise_sigma[F]
 
     def corrected_streams(self, df: pd.DataFrame) -> pd.DataFrame:
         """Online corrected stream: x_j(t) - flag_j(t) * estimate_j(t), raw units.
@@ -142,10 +164,14 @@ class DriftDetector:
         V = self.components_
         return delta - (delta @ V) @ V.T
 
+    @property
+    def complement_(self) -> np.ndarray:
+        V = self.components_
+        return np.eye(V.shape[0]) - V @ V.T
+
     def _joint_estimate(self, resid: np.ndarray, flags: np.ndarray) -> np.ndarray:
         """Drift size per flagged sensor (noise units): Q[F,F]^-1 r_F for each row's flag set F."""
-        V = self.components_
-        Q = np.eye(V.shape[0]) - V @ V.T
+        Q = self.complement_
         est = np.zeros_like(resid)
         patterns, inverse = np.unique(flags, axis=0, return_inverse=True)
         for p_idx, pattern in enumerate(patterns):
@@ -153,8 +179,7 @@ class DriftDetector:
             if F.size == 0:
                 continue
             rows = np.flatnonzero(inverse.ravel() == p_idx)
-            # pinv guards against nearly collinear sensors (poorly isolable pairs)
-            est[np.ix_(rows, F)] = resid[np.ix_(rows, F)] @ np.linalg.pinv(Q[np.ix_(F, F)]).T
+            est[np.ix_(rows, F)] = solve_drift(resid[np.ix_(rows, F)], Q[np.ix_(F, F)])
         return est
 
     def fit(self, df: pd.DataFrame, sensors: Sequence[str]) -> DriftDetector:
@@ -224,6 +249,8 @@ class DriftDetector:
             anomalous=pd.Series(anomalous, index=idx, name="anomalous"),
             flags=pd.DataFrame(flags, index=idx, columns=cols),
             estimate=pd.DataFrame(estimate, index=idx, columns=cols),
+            complement=self.complement_,
+            noise_sigma=np.asarray(self.noise_sigma_, dtype=np.float64),
         )
 
 
