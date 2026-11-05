@@ -70,8 +70,8 @@ def main() -> None:
         "cycles_where_alert_decision_differs": int((pred_b != pred_c).sum()),
         "max_abs_probability_difference": float(np.abs(p_base - p_corr).max()),
         "bootstrap_corrected_minus_baseline": paired_bootstrap(test["unit"], y, pred_b, pred_c, n_boot=2000, seed=0),
-        "detector_flags_train_in_sample": flag_summary(train, drift_train),
-        "detector_flags_test": flag_summary(test, drift_test),
+        "detector_flags_train_in_sample": flag_summary(train, drift_train.flags),
+        "detector_flags_test": flag_summary(test, drift_test.flags),
     }
 
     # ---------------------------------------------- injected-drift stress test
